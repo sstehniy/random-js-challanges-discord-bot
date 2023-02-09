@@ -1,8 +1,20 @@
 import { browser } from "./index";
 import { Router } from "express";
+import { Page } from "puppeteer";
 
 const BASE_URL = "https://edabit.com";
 const SHUFFLE_URL = `${BASE_URL}/shuffle`;
+
+const login = async (page: Page) => {
+  const tab = await page.$(".ui.big.tabular.menu  a.item");
+  await tab.click();
+  await page.type("input[name='email']", "sstehniy@gmail.com");
+  await page.click("input[name='password']");
+  await page.type("input[name='password']", "Buyua123+");
+
+  await page.click(".ui.green.big.fluid.button"),
+    await page.waitForNetworkIdle();
+};
 
 export default Router()
   .get("/randomTask", async (req, res) => {
@@ -101,22 +113,43 @@ export default Router()
       .status(200)
       .json({ image, taskId, startCode: joinTextArrayToEditorCode(startCode) });
   })
-  .post("/checkTask", async (req, res) => {
-    const { taskId, code } = req.body;
+  .post("/submitSolution", async (req, res) => {
+    const { taskId, solution } = req.body;
     const page = await browser.newPage();
+    console.log(taskId, solution);
     await page.goto(`${BASE_URL}/challenge/${taskId}`);
     await page.waitForSelector(".grey-segment.code-area.instructions");
     const codeTab = await page.$$(".rc-tabs-tab");
     await codeTab[1].click();
+    console.log("here 1");
     await page.waitForSelector(".CodeMirror-code");
+    console.log("here 2");
+
     const codeMirror = await page.$(".CodeMirror-code");
-    await codeMirror.evaluate((codeMirror, code) => {
-      codeMirror.textContent = code;
-    }, code);
+    console.log("here 3");
+
+    await codeMirror.type(solution);
+    console.log("here 4");
+
     await page.click(".ui.green.large.right.floated.button");
-    await page.screenshot({ path: "exampleResponse.png" });
+    console.log("here 5");
+    const loginModal = await page.$(
+      ".ui.small.modal.transition.visible.active.error-shake"
+    );
+
+    await page.screenshot({ path: "before.png" });
+
+    if (loginModal) {
+      console.log("here 6");
+      await login(page);
+    }
+    await page.screenshot({ path: "after.png" });
+
+    const output = await page.$(".console-segment.custom-bullets");
+    await output.screenshot({ path: "output.png" });
+    const image = await output.screenshot({ encoding: "base64" });
     await page.close();
-    res.status(200).json({ message: "ok" });
+    res.status(200).json({ message: "ok", data: { image } });
   });
 
 function joinTextArrayToEditorCode(textArray: string[]) {
