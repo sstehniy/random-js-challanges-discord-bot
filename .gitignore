@@ -19,8 +19,9 @@ Thumbs.db
 # Config files
 *.conf
 *.ini
-*.json
 *.lock
 
 # Build artifacts
 dist
+
+.env
