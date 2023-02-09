@@ -32,45 +32,45 @@ client.on("ready", (client) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isModalSubmit()) {
-    await interaction.deferUpdate();
-
-    const id = interaction.customId.split(":")[1];
+    await interaction.deferReply({ ephemeral: true });
     const solution = (
       interaction.fields.getField("solution") as TextInputModalData
     ).value;
-    console.log(solution, id);
-    axios
-      .post(
-        "http://localhost:3000/api/submitSolution",
-        {
-          taskId: id,
-          solution,
-        },
-        { timeout: 60000 }
-      )
-      .then((res) =>
-        interaction.editReply({
-          files: [Buffer.from(res.data.image, "base64")],
-        })
-      );
+    await interaction.editReply({ content: "```js\n" + solution + "\n```" });
+    console.log(solution);
+    const [, id, language] = interaction.customId.split(":");
+
+    const res = await axios.post(
+      "http://localhost:3000/api/submitSolution",
+      {
+        taskId: id,
+        solution,
+        isPython: language === "Python",
+      },
+      { timeout: 60000 }
+    );
+    console.log(res.data.message);
+    await interaction.editReply({
+      files: [Buffer.from(res.data.data.image, "base64")],
+    });
   } else if (interaction.isButton()) {
-    const [action, taskId] = interaction.customId.split(":");
+    const [action, taskId, language] = interaction.customId.split(":");
 
     if (action === "write_solution") {
       const modal = new ModalBuilder()
-        .setCustomId(`submit_solution:${taskId}`)
+        .setCustomId(`submit_solution:${taskId}:${language}`)
         .setTitle("Submit Solution");
 
       // Add components to modal
 
-      const hobbiesInput = new TextInputBuilder()
+      const solutionInput = new TextInputBuilder()
         .setCustomId("solution")
         .setLabel("Write the solution below")
         // Paragraph means multiple lines of text.
         .setStyle(TextInputStyle.Paragraph);
 
       const secondActionRow = new ActionRowBuilder().addComponents(
-        hobbiesInput
+        solutionInput
       );
 
       // Add inputs to the modal
@@ -80,20 +80,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       // Show the modal to the user
       await interaction.showModal(modal);
-    }
-    if (action === "submit_solution") {
-      await interaction.deferUpdate();
-      await interaction.followUp({
-        content: "Please wait...",
-      });
-      const solution = interaction.message?.content;
-      const response = await axios.post(
-        "http://localhost:3000/api/submitSolution",
-        { taskId, solution }
-      );
-      await interaction.followUp({
-        content: response.data,
-      });
     }
   } else if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "ping") {
@@ -110,6 +96,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         { params: { language, difficulty } }
       );
       const { taskId, image, startCode } = taskResponse.data;
+
       await interaction.editReply({ files: [Buffer.from(image, "base64")] });
       await interaction.followUp({
         content: "```js\n" + startCode + "\n```",
@@ -121,7 +108,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 type: ComponentType.Button,
                 style: ButtonStyle.Primary,
 
-                customId: `write_solution:${taskId}`,
+                customId: `write_solution:${taskId}:${language}`,
                 label: "Solve",
               },
             ],
