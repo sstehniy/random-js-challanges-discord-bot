@@ -54,7 +54,6 @@ export default Router()
     }
 
     await difficultySelector.click();
-    await page.screenshot({ path: "d.png" });
 
     const difficulty_dropdown = await page.waitForSelector(
       ".visible.menu.transition"

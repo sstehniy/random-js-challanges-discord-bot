@@ -9,6 +9,7 @@
     "lint:fix": "npm run lint -- --fix",
     "dev:bot": "nodemon --exec ts-node bot/index.ts",
     "dev:crawler": "nodemon --exec ts-node crawler/index.ts",
+    "crawler": "ts-node crawl_quotes",
     "dev": "npm-run-all -p -l dev:*"
   },
   "repository": {
